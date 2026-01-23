@@ -284,3 +284,9 @@ final_program = ensemble.compile([program1, program2, program3])
 - Sequential composition amplifies latency
 - Error propagation in chains can be hard to debug
 - Parallel composition requires careful state management
+
+## Official Documentation
+
+- **DSPy Documentation**: https://dspy.ai/
+- **DSPy GitHub**: https://github.com/stanfordnlp/dspy
+- **Modules Guide**: https://dspy.ai/learn/programming/modules/
