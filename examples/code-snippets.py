@@ -197,6 +197,47 @@ def optimize_with_gepa(program, trainset):
     return optimizer.compile(program, trainset=trainset)
 
 
+def optimize_anything_single_task(seed_artifact, evaluator_fn, background_info=None):
+    """Optimize any text artifact using GEPA's optimize_anything (single-task)."""
+    import gepa.optimize_anything as oa
+    
+    result = oa.optimize_anything(
+        seed_candidate=seed_artifact,
+        evaluator=evaluator_fn,
+        background=background_info,
+    )
+    
+    return result.best_candidate
+
+
+def optimize_anything_generalization(seed_artifact, evaluator_fn, trainset, valset, background_info=None):
+    """Optimize a text artifact that generalizes to unseen examples."""
+    import gepa.optimize_anything as oa
+    
+    result = oa.optimize_anything(
+        seed_candidate=seed_artifact,
+        evaluator=evaluator_fn,
+        dataset=trainset,
+        valset=valset,
+        background=background_info,
+    )
+    
+    return result.best_candidate
+
+
+def optimize_anything_seedless(evaluator_fn, objective, background_info=None):
+    """Optimize from scratch — describe what you need, no seed required."""
+    import gepa.optimize_anything as oa
+    
+    result = oa.optimize_anything(
+        evaluator=evaluator_fn,
+        objective=objective,
+        background=background_info,
+    )
+    
+    return result.best_candidate
+
+
 def finetune_program(program, trainset, output_dir="./finetuned"):
     """Fine-tune model weights."""
     optimizer = dspy.BootstrapFinetune(

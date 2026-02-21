@@ -20,6 +20,7 @@ DSPy is a declarative framework that lets you *program* language models instead 
 | [dspy-miprov2-optimizer](skills/dspy-miprov2-optimizer/SKILL.md) | Bayesian instruction+demo optimization | 200+ examples, comprehensive tuning |
 | [dspy-gepa-reflective](skills/dspy-gepa-reflective/SKILL.md) | LLM reflection on execution traces | Agentic systems, complex workflows |
 | [dspy-simba-optimizer](skills/dspy-simba-optimizer/SKILL.md) | Mini-batch Bayesian optimization | Custom feedback, budget-friendly |
+| [dspy-optimize-anything](skills/dspy-optimize-anything/SKILL.md) | Universal text artifact optimizer (code, configs, SVGs, etc.) | Beyond prompts: any measurable text artifact |
 | [dspy-finetune-bootstrap](skills/dspy-finetune-bootstrap/SKILL.md) | Fine-tune model weights | Production deployment, efficiency |
 
 ### Pipelines & Components
@@ -92,6 +93,9 @@ pip install haystack-ai
 
 # For fine-tuning
 pip install transformers datasets
+
+# For optimize_anything (universal text optimizer)
+pip install gepa
 ```
 
 ## 💡 Quick Start

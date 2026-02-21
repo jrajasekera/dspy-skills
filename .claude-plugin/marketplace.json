@@ -44,6 +44,11 @@
       "description": "Optimize complex agents and agentic systems using LLM reflection on execution trajectories"
     },
     {
+      "name": "dspy-optimize-anything",
+      "source": "skills/dspy-optimize-anything",
+      "description": "Universal text artifact optimizer using GEPA's optimize_anything API"
+    },
+    {
       "name": "dspy-haystack-integration",
       "description": "Integrate DSPy optimization into existing Haystack pipelines for automatic prompt improvement"
     },
