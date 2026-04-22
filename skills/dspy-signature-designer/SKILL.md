@@ -1,7 +1,7 @@
 ---
 name: dspy-signature-designer
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "create a DSPy signature", "define inputs and outputs", "design a signature", "use InputField or OutputField", "add type hints to DSPy", mentions "signature class", "type-safe DSPy", "Pydantic models in DSPy", or needs to define what a DSPy module should do with structured inputs and outputs.
 allowed-tools:
   - Read
@@ -231,7 +231,7 @@ print(f"Aspects: {result.aspects}")
 ## Advanced Field Options
 
 ```python
-# Constraints (available in 3.1.2+)
+# Pydantic-style validation constraints
 class ConstrainedSignature(dspy.Signature):
     """Example with validation constraints."""
 
@@ -254,15 +254,54 @@ class ConstrainedSignature(dspy.Signature):
         multiple_of=2,
         desc="Even number count"
     )
-
-# Prefix and format
-class FormattedSignature(dspy.Signature):
-    """Example with custom prefix and format."""
-
-    goal: str = dspy.InputField(prefix="Goal:")
-    text: str = dspy.InputField(format=lambda x: x.upper())
-    action: str = dspy.OutputField(prefix="Action:")
 ```
+
+> **Deprecated in DSPy 3.2.0:** `prefix`, `format`, and `parser` kwargs on `InputField` / `OutputField` now emit `DeprecationWarning`. They still work but will be removed in a later release. Prefer descriptive field names + `desc` over custom prefix/format; adapters handle the formatting.
+
+## Input Type Validation (DSPy 3.2.0)
+
+DSPy 3.2.0 uses `typeguard` to check that inputs passed to a module match the field annotations declared on its signature. Mismatches produce a **warning**, not a hard error — so this is non-breaking for existing code:
+
+```python
+import dspy
+
+dspy.settings.configure(warn_on_type_mismatch=True)  # default is off; opt-in
+
+class Classify(dspy.Signature):
+    text: str = dspy.InputField()
+    label: bool = dspy.OutputField()
+
+classify = dspy.Predict(Classify)
+classify(text=123)  # typeguard logs a warning: expected str, got int
+```
+
+> Separately, DSPy 3.2.0 **does** raise `ValueError` at signature construction time if you declare duplicate input/output field names (previously silently shadowed).
+
+## XMLAdapter (DSPy 3.2.0)
+
+If your target LM formats structured output more reliably as XML than JSON, swap `JSONAdapter` / `ChatAdapter` for `dspy.XMLAdapter`:
+
+```python
+import dspy
+
+dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"), adapter=dspy.XMLAdapter())
+```
+
+Use when JSON-mode models degrade on deeply nested outputs or when you want wider model compatibility. Prompt-layer structure is identical — only the serialization/parsing format changes.
+
+## `dspy.Reasoning` type (DSPy 3.2.0)
+
+A new `dspy.Reasoning` type is exported for signatures targeting reasoning models (o-series, etc.):
+
+```python
+class AnalyzedAnswer(dspy.Signature):
+    """Answer a question with reasoning trace."""
+    question: str = dspy.InputField()
+    reasoning: dspy.Reasoning = dspy.OutputField(desc="Step-by-step thinking")
+    answer: str = dspy.OutputField()
+```
+
+`dspy.Reasoning` behaves like a string but carries semantics that let adapters route it through native-reasoning channels when the LM supports them. Note that in 3.2.0 `dspy.ChainOfThought` does **not** auto-switch to native reasoning — that behavior was added then reverted before release. Use `dspy.Reasoning` explicitly in a signature when you want the typed hook.
 
 ## Limitations
 

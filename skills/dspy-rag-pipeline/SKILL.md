@@ -1,7 +1,7 @@
 ---
 name: dspy-rag-pipeline
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "build a RAG pipeline", "create retrieval augmented generation", "use ColBERTv2 in DSPy", "set up a retriever in DSPy", mentions "RAG with DSPy", "context retrieval", "multi-hop RAG", or needs to build a DSPy system that retrieves external knowledge to answer questions with grounded, factual responses.
 allowed-tools:
   - Read
@@ -233,6 +233,30 @@ class MultiHopRAG(dspy.Module):
 2. **Signature descriptions matter** - Guide the model with field descriptions
 3. **Validate grounding** - Ensure answers come from retrieved context
 4. **Consider multi-hop** - Complex questions may need iterative retrieval
+
+## Retrievers with Similarity Scores (DSPy 3.2.0)
+
+For use cases that need confidence filtering or re-ranking inputs, DSPy 3.2.0 adds `dspy.EmbeddingsWithScores` — an `Embeddings` subclass that returns the similarity score alongside each passage:
+
+```python
+import dspy
+import numpy as np
+from dspy.retrievers import EmbeddingsWithScores
+
+corpus = ["Paris is the capital of France.", "Tokyo is the capital of Japan.", ...]
+embedder = dspy.Embedder("openai/text-embedding-3-small")
+
+retriever = EmbeddingsWithScores(corpus=corpus, embedder=embedder, k=3)
+
+result = retriever("What is the capital of France?")
+for passage, score in zip(result.passages, result.scores):
+    print(f"{score:.3f}  {passage}")
+
+# Filter by score threshold before feeding to the generator
+kept = [p for p, s in zip(result.passages, result.scores) if s >= 0.7]
+```
+
+The returned `Prediction` includes `passages`, `indices` (positions in `corpus`), and `scores` (cosine similarities). Use this when you want to drop low-confidence context rather than blindly feeding `k=N` passages to a reader.
 
 ## Limitations
 

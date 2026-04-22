@@ -1,7 +1,7 @@
 ---
 name: dspy-evaluation-suite
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "evaluate a DSPy program", "test my DSPy module", "measure performance", "create evaluation metrics", "use answer_exact_match or SemanticF1", mentions "Evaluate class", "comparing programs", "establishing baselines", or needs to systematically test and measure DSPy program quality with custom or built-in metrics.
 allowed-tools:
   - Read
@@ -88,8 +88,21 @@ LLM-based semantic evaluation:
 from dspy.evaluate import SemanticF1
 
 semantic = SemanticF1()
-score = semantic(example, prediction)
+result = semantic(example, prediction)
 ```
+
+> **DSPy 3.2.0 change:** `SemanticF1` (and `CompleteAndGrounded`) now return a `dspy.Prediction(score=..., ...)` instead of a bare `float`. Direct callers must read `.score`:
+>
+> ```python
+> result = semantic(example, prediction)
+> score = result.score  # float
+> ```
+>
+> `dspy.Evaluate` handles the new return type transparently — existing optimizer/eval pipelines keep working. Only code that calls the metric directly (e.g. inline assertions, custom dashboards) needs updating.
+
+### Evaluate threading (DSPy 3.2.0)
+
+When `Evaluate(num_threads=1)`, execution now runs on the main thread (previously a worker thread). This makes it possible to step through metric evaluations in a debugger without crossing thread boundaries. For `num_threads > 1` nothing changes.
 
 ## Custom Metrics
 
@@ -125,15 +138,21 @@ def quality_metric(example, pred, trace=None):
 
 ### GEPA-Compatible Metric
 
+GEPA calls the metric with **five positional args** — `(gold, pred, trace, pred_name, pred_trace)` — and expects a `float` or a `dspy.Prediction(score=..., feedback=...)`. Shorter `(example, pred, trace=None)` signatures raise `TypeError` at evaluation time, and tuple returns are not a supported contract.
+
 ```python
-def feedback_metric(example, pred, trace=None):
-    """Returns (score, feedback) for GEPA optimizer."""
-    correct = example.answer.lower() in pred.answer.lower()
-    
-    if correct:
-        return 1.0, "Correct answer provided."
-    else:
-        return 0.0, f"Expected '{example.answer}', got '{pred.answer}'"
+import dspy
+
+def feedback_metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
+    """Return float or dspy.Prediction(score, feedback) for GEPA."""
+    correct = gold.answer.lower() in pred.answer.lower()
+    score = 1.0 if correct else 0.0
+    feedback = (
+        "Correct answer provided."
+        if correct
+        else f"Expected '{gold.answer}', got '{pred.answer}'."
+    )
+    return dspy.Prediction(score=score, feedback=feedback)
 ```
 
 ## Production Example

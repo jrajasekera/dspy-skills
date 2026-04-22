@@ -1,7 +1,7 @@
 ---
 name: dspy-bootstrap-fewshot
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "bootstrap few-shot examples", "generate demonstrations", "use BootstrapFewShot", "optimize with limited data", "create training demos automatically", mentions "teacher model for few-shot", "10-50 training examples", or wants automatic demonstration generation for a DSPy program without extensive compute.
 allowed-tools:
   - Read
@@ -165,6 +165,10 @@ def optimize_with_bootstrap(trainset, devset):
 - Teacher model costs can add up
 - May not generalize to very different inputs
 - Limited exploration compared to MIPROv2
+
+## Version Notes
+
+DSPy 3.2.0 fixes a bug where `metric_threshold` was ignored in the unshuffled bootstrap path (`seed=-1`). If you rely on `metric_threshold` to drop weak demos, `seed=-1` now honors it consistently with the shuffled paths.
 
 ## Official Documentation
 

@@ -143,17 +143,24 @@ def contains_answer_metric(example, pred, trace=None) -> float:
     return float(example.answer.lower() in pred.answer.lower())
 
 
-def gepa_feedback_metric(example, pred, trace=None):
-    """Metric with feedback for GEPA optimizer."""
+def gepa_feedback_metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
+    """Metric with feedback for GEPA optimizer.
+
+    GEPA requires the 5-arg signature and a return type of `float` or
+    `dspy.Prediction(score=..., feedback=...)` (aka `ScoreWithFeedback`).
+    Tuple returns are NOT a supported contract.
+    """
     if not hasattr(pred, 'answer') or not pred.answer:
-        return 0.0, "No answer generated"
-    
-    correct = example.answer.lower() in pred.answer.lower()
-    
-    if correct:
-        return 1.0, "Correct answer provided"
-    else:
-        return 0.0, f"Expected '{example.answer}', got '{pred.answer}'"
+        return dspy.Prediction(score=0.0, feedback="No answer generated")
+
+    correct = gold.answer.lower() in pred.answer.lower()
+    score = 1.0 if correct else 0.0
+    feedback = (
+        "Correct answer provided"
+        if correct
+        else f"Expected '{gold.answer}', got '{pred.answer}'"
+    )
+    return dspy.Prediction(score=score, feedback=feedback)
 
 
 # =============================================================================

@@ -1,7 +1,7 @@
 ---
 name: dspy-debugging-observability
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "debug DSPy programs", "trace LLM calls", "monitor production DSPy", "use MLflow with DSPy", mentions "inspect_history", "custom callbacks", "observability", "production monitoring", "cost tracking", or needs to debug, trace, and monitor DSPy applications in development and production.
 allowed-tools:
   - Read
@@ -234,6 +234,38 @@ callback = SamplingCallback(sample_rate=0.1)
 dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"), callbacks=[callback])
 ```
 
+## Persisting Histories to a File (DSPy 3.2.0)
+
+`dspy.inspect_history` now accepts a `file=` parameter so you can dump the recent LM-call history to any file-like object. ANSI color codes are suppressed automatically when writing to a non-terminal target, which keeps saved logs grep-friendly:
+
+```python
+import dspy
+
+with open("last-run.log", "w") as f:
+    dspy.inspect_history(n=20, file=f)
+```
+
+Useful for capturing repro logs in CI, attaching to bug reports, or archiving production debug runs.
+
+> `pretty_print_history` lives at `dspy.utils.pretty_print_history` (not top-level `dspy.pretty_print_history`). Import via that path if you need it.
+
+## Handling Context-Window Errors (DSPy 3.2.0)
+
+DSPy 3.2.0 introduces `dspy.ContextWindowExceededError` — a DSPy-owned exception raised by `BaseLM` subclasses when a prompt exceeds the model's context window. Catch it in callbacks or wrappers to drive fallback logic (e.g., switch to a larger-context model, truncate history, or summarize):
+
+```python
+import dspy
+
+try:
+    result = my_module(question=very_long_question)
+except dspy.ContextWindowExceededError:
+    # Fallback: rerun on a larger-context model
+    with dspy.context(lm=dspy.LM("anthropic/claude-opus-4-7")):
+        result = my_module(question=very_long_question)
+```
+
+Previously you had to string-match on provider-specific `litellm` error messages; the new exception is provider-agnostic.
+
 ## Best Practices
 
 1. **Use inspect_history() for debugging** - Quick inspection during development
@@ -241,6 +273,7 @@ dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"), callbacks=[callback])
 3. **Sample high-volume traces** - Reduce overhead with 1-10% sampling
 4. **Privacy-aware logging** - Redact PII before logging
 5. **Async callbacks** - Non-blocking callbacks for production
+6. **Catch `dspy.ContextWindowExceededError`** - Drive context-overflow fallbacks provider-agnostically (3.2.0+)
 
 ## Limitations
 

@@ -1,7 +1,7 @@
 ---
 name: dspy-finetune-bootstrap
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "fine-tune a DSPy model", "distill a program into weights", "use BootstrapFinetune", "create a student model", "reduce inference costs with fine-tuning", mentions "model distillation", "teacher-student training", or wants to deploy a DSPy program as fine-tuned weights for production efficiency.
 allowed-tools:
   - Read
@@ -247,6 +247,25 @@ def finetune_rag_classifier(trainset, devset):
 - Student may not match teacher quality on all inputs
 - Fine-tuning takes hours/days depending on data size
 - Model size reduction may cause capability loss
+
+## BetterTogether: prompt + weight optimization (DSPy 3.2.0)
+
+DSPy 3.2.0 rewrote `dspy.BetterTogether` into a composition optimizer that alternates between *any* prompt-level and weight-level optimizers you choose. It takes arbitrary optimizers as kwargs and supports custom strategy strings like `"p -> w -> p"` where `p` is a prompt optimizer and `w` is a weight optimizer:
+
+```python
+import dspy
+
+optimizer = dspy.BetterTogether(
+    metric=metric,
+    p=dspy.GEPA(metric=feedback_metric, reflection_lm=dspy.LM("openai/gpt-4o"), auto="light"),
+    w=dspy.BootstrapFinetune(metric=metric),
+)
+
+# "p -> w -> p" = prompt-optimize, then weight-tune, then prompt-optimize again
+compiled = optimizer.compile(program, trainset=trainset, strategy="p -> w -> p")
+```
+
+Defaults (if `p` / `w` are omitted) are `BootstrapFewShotWithRandomSearch` + `BootstrapFinetune`. Validation-set selection still picks the best candidate across stages. Use this when you want both a prompt-level and a weight-level pass without hand-orchestrating them yourself.
 
 ## Official Documentation
 

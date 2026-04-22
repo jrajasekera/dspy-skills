@@ -1,7 +1,7 @@
 ---
 name: dspy-miprov2-optimizer
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "optimize a DSPy program", "use MIPROv2", "tune instructions and demos", "get best DSPy performance", "run Bayesian optimization", mentions "state-of-the-art DSPy optimizer", "joint instruction tuning", or needs maximum performance from a DSPy program with substantial training data (200+ examples).
 allowed-tools:
   - Read
@@ -54,6 +54,14 @@ Jointly optimize instructions and few-shot demonstrations using Bayesian Optimiz
 3. **Search** - Bayesian optimization over combinations
 
 ### Phase 1: Setup
+
+> **Install note (DSPy 3.2.0+):** MIPROv2 depends on `optuna`, which was moved to an optional extra in 3.2.0. Install with:
+>
+> ```bash
+> pip install "dspy[optuna]>=3.2.0"
+> ```
+>
+> Without the extra, `MIPROv2` will raise an `ImportError` with a helpful message pointing at this install command.
 
 ```python
 import dspy
@@ -195,6 +203,11 @@ optimizer = MIPROv2(
 - Requires substantial training data
 - Optimization time: hours for "heavy" preset
 - Memory intensive for large candidate sets
+
+## Version Notes
+
+- DSPy 3.2.0 moved `optuna` to an optional extra (see install note above).
+- DSPy 3.2.0 fixed a MIPROv2 demo-index bookkeeping bug that mis-reported the selected demo per trial in the Optuna logs. Trials still optimized correctly but reproducing a specific best trial from old logs may select a different demo set in 3.2.0.
 
 ## Official Documentation
 

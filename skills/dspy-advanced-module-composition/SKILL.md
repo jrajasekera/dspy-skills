@@ -1,7 +1,7 @@
 ---
 name: dspy-advanced-module-composition
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "compose DSPy modules", "use Ensemble optimizer", "combine multiple programs", "use dspy.MultiChainComparison", mentions "ensemble voting", "module composition", "sequential pipelines", or needs to build complex multi-module DSPy programs with ensemble patterns or multi-chain comparison.
 allowed-tools:
   - Read
@@ -284,6 +284,23 @@ final_program = ensemble.compile([program1, program2, program3])
 - Sequential composition amplifies latency
 - Error propagation in chains can be hard to debug
 - Parallel composition requires careful state management
+
+## BetterTogether: prompt + weight composition
+
+For the meta-composition pattern of alternating prompt-level optimization with weight-level fine-tuning, use the rewritten `dspy.BetterTogether` (DSPy 3.2.0). It takes any prompt optimizer (`p=`) and any weight optimizer (`w=`) and sequences them via a strategy string like `"p -> w -> p"`. See [dspy-finetune-bootstrap](../dspy-finetune-bootstrap/SKILL.md) for a full example.
+
+## Typed Reasoning Outputs
+
+DSPy 3.2.0 exports `dspy.Reasoning` — a string-like type that signals a field carries step-by-step thinking. Use it in custom signatures when you want adapters to route the field through native reasoning channels on reasoning-capable LMs (o-series, etc.):
+
+```python
+class Analyze(dspy.Signature):
+    question: str = dspy.InputField()
+    reasoning: dspy.Reasoning = dspy.OutputField()
+    answer: str = dspy.OutputField()
+```
+
+Note: `dspy.ChainOfThought` itself does NOT auto-switch to native reasoning in 3.2.0 (that behavior was added then reverted) — opt in via the type when you want it.
 
 ## Official Documentation
 

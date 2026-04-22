@@ -1,5 +1,7 @@
 ---
 name: dspy-optimize-anything
+version: "1.0.0"
+dspy-compatibility: "3.2.0"
 description: Universal text artifact optimizer using GEPA's optimize_anything API for code, prompts, agent architectures, configs, and more
 allowed-tools:
   - Read
@@ -45,7 +47,7 @@ Optimize any artifact representable as text — code, prompts, agent architectur
 ### Phase 1: Install
 
 ```bash
-pip install gepa
+pip install "gepa>=0.0.27"
 ```
 
 ### Phase 2: Define Evaluator with ASI
@@ -272,7 +274,7 @@ result = oa.optimize_anything(
 
 ## Limitations
 
-- Requires the `gepa` package (`pip install gepa`)
+- Requires the `gepa` package (`pip install "gepa>=0.0.27"`)
 - Evaluator must be deterministic or low-variance for stable optimization
 - Compute cost scales with number of candidates explored
 - Single-task mode does not generalize; use mode 3 with `valset` for transfer

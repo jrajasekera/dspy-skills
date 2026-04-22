@@ -1,7 +1,7 @@
 ---
 name: dspy-simba-optimizer
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "optimize with SIMBA", "use Bayesian optimization", "optimize agents with custom feedback", mentions "SIMBA optimizer", "mini-batch optimization", "statistical optimization", "lightweight optimizer", or needs an alternative to MIPROv2/GEPA for programs with rich feedback signals.
 allowed-tools:
   - Read
@@ -78,7 +78,9 @@ class QAPipeline(dspy.Module):
     def forward(self, question):
         return self.generate(question=question)
 
-# Metric (can return just score or (score, feedback))
+# Metric — return float or dspy.Prediction(score=..., feedback=...).
+# SIMBA does NOT accept (score, feedback) tuples; tuple returns will fail
+# the internal `hasattr(output, "score")` check in dspy.teleprompt.simba_utils.
 def qa_metric(example, pred, trace=None):
     correct = example.answer.lower() in pred.answer.lower()
     return 1.0 if correct else 0.0

@@ -1,7 +1,7 @@
 ---
 name: dspy-custom-module-design
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "create custom DSPy module", "design a DSPy module", "extend dspy.Module", "build reusable DSPy component", mentions "custom module patterns", "module serialization", "stateful modules", "module testing", or needs to design production-quality custom DSPy modules with proper architecture, state management, and testing.
 allowed-tools:
   - Read
@@ -161,10 +161,38 @@ module.save("my_module.json")
 loaded = MyCustomModule()
 loaded.load("my_module.json")
 
-# For loading entire programs (dspy>=2.6.0)
+# Load an entire program (directory-based save with save_program=True)
 module.save("./my_module/", save_program=True)
 loaded = dspy.load("./my_module/")
 ```
+
+### Safe state loading (DSPy 3.2.0+)
+
+`BaseModule.load_state` now filters unsafe LM-state keys (`api_base`, `base_url`, `model_list`) when restoring modules so that a module saved by one party can't covertly redirect a loader's LM calls to an attacker-controlled endpoint. This means a module saved with a specific `api_base` will come back with that key stripped — if you genuinely need to persist those fields, opt out:
+
+```python
+loaded = MyCustomModule()
+loaded.load("my_module.json", allow_unsafe_lm_state=True)
+```
+
+Default behavior is safe-by-default; the opt-out is only appropriate when you fully trust the source of the state file.
+
+### Safe disk-cache deserialization (DSPy 3.2.0+)
+
+If you ship modules that use `dspy.configure_cache(...)` with disk persistence, consider restricting pickle deserialization in production to avoid arbitrary-code-execution risk from tampered cache files:
+
+```python
+import dspy
+
+dspy.configure_cache(
+    enable_disk_cache=True,
+    disk_cache_dir="/var/cache/dspy",
+    restrict_pickle=True,
+    safe_types=[dspy.Prediction, dict, list, str, int, float, bool, type(None)],
+)
+```
+
+With `restrict_pickle=True`, DSPy only deserializes types listed in `safe_types`; anything else raises instead of executing opaque pickled objects.
 
 ## Production Example
 

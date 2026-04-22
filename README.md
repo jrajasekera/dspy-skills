@@ -2,7 +2,7 @@
 
 A comprehensive collection of AI-powered skills for programming and optimizing LLM applications using the **DSPy** framework. These skills enable you to move from manual prompt engineering to systematic, programmatic LLM development.
 
-**Version Compatibility**: All skills target **DSPy 3.1.2** (released January 19, 2026). All code examples and APIs have been verified against this version.
+**Version Compatibility**: All skills target **DSPy 3.2.0** (released April 21, 2026). All code examples and APIs have been verified against this version.
 
 ## 🎯 What is DSPy?
 
@@ -78,13 +78,16 @@ DSPy is a declarative framework that lets you *program* language models instead 
 ## 🚀 Installation
 
 ```bash
-# Install DSPy 3.1.2 or later
-pip install dspy-ai>=3.1.2
+# Install DSPy 3.2.0 or later
+pip install "dspy>=3.2.0"
 ```
 
 ### Optional Dependencies
 
 ```bash
+# For MIPROv2 Bayesian optimization (optuna moved to extras in 3.2.0)
+pip install "dspy[optuna]>=3.2.0"
+
 # For ColBERTv2 retrieval
 pip install colbert-ai
 
@@ -95,7 +98,7 @@ pip install haystack-ai
 pip install transformers datasets
 
 # For optimize_anything (universal text optimizer)
-pip install gepa
+pip install "gepa>=0.0.27"
 ```
 
 ## 💡 Quick Start

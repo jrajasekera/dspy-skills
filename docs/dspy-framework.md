@@ -67,6 +67,15 @@ Supported types:
 - Optional: `Optional[str]`
 - Literals: `Literal['a', 'b', 'c']`
 - Pydantic models for complex structures
+- `dspy.Reasoning` — a string-like type (DSPy 3.2.0) signaling a field carries step-by-step thinking; adapters can route it through native reasoning channels on reasoning-capable LMs
+
+### Input Type Validation (DSPy 3.2.0)
+
+DSPy 3.2.0 uses `typeguard` to check that call-time arguments match the declared signature. Mismatches emit a **warning** (opt-in via `dspy.settings.warn_on_type_mismatch=True`), not a hard error, so this is non-breaking. Separately, DSPy 3.2.0 raises `ValueError` at signature-construction time if input/output field names collide.
+
+### Deprecated Field kwargs (DSPy 3.2.0)
+
+`prefix`, `format`, and `parser` kwargs on `InputField` / `OutputField` now emit `DeprecationWarning`. They still work but will be removed in a future release. Adapter-era code should rely on field names + `desc` and let the adapter handle formatting.
 
 ---
 
@@ -138,6 +147,18 @@ dspy.configure(
     adapter=dspy.JSONAdapter()
 )
 ```
+
+### dspy.XMLAdapter (DSPy 3.2.0)
+
+- XML serialization/parsing for structured I/O
+- Useful when a target model formats XML more reliably than JSON, or when you want compatibility across models with uneven JSON-mode support
+- Same prompt-layer behavior as `JSONAdapter`; only format changes
+
+```python
+dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"), adapter=dspy.XMLAdapter())
+```
+
+> DSPy 3.2.0 also adapts the adapter layer to depend on `BaseLM` rather than the concrete `LM` class. Custom `BaseLM` subclasses must now implement the model-capability checks (e.g. `supports_reasoning`) that used to be resolved via `litellm`.
 
 ---
 
@@ -241,6 +262,8 @@ optimizer = COPRO(
 
 State-of-the-art: Bayesian optimization of instructions + demos.
 
+> **Install note (DSPy 3.2.0+):** `optuna` moved to an optional extra. Install with `pip install "dspy[optuna]>=3.2.0"` or `MIPROv2` will raise an `ImportError`.
+
 ```python
 import dspy
 
@@ -287,11 +310,11 @@ Newest optimizer: LLM reflection on full execution traces.
 ```python
 import dspy
 
-# GEPA requires a feedback metric
-def gepa_metric(example, pred, trace=None):
-    is_correct = example.answer.lower() in pred.answer.lower()
-    feedback = "Correct answer" if is_correct else f"Expected {example.answer}, got {pred.answer}"
-    return is_correct, feedback
+# GEPA requires a feedback metric with the full 5-arg signature
+def gepa_metric(gold, pred, trace=None, pred_name=None, pred_trace=None):
+    is_correct = gold.answer.lower() in pred.answer.lower()
+    feedback = "Correct answer" if is_correct else f"Expected {gold.answer}, got {pred.answer}"
+    return dspy.Prediction(score=float(is_correct), feedback=feedback)
 
 optimizer = dspy.GEPA(
     metric=gepa_metric,
@@ -302,10 +325,11 @@ optimizer = dspy.GEPA(
 
 | Parameter | Description | Default |
 |-----------|-------------|--------|
-| `metric` | Must return (score, feedback) | Required |
+| `metric` | Signature `(gold, pred, trace, pred_name, pred_trace)`; returns `float` or `dspy.Prediction(score=..., feedback=...)` | Required |
 | `reflection_lm` | Strong LM for reflection | Default LM |
 | `auto` | "light", "medium", "heavy" | None |
-| `enable_tool_optimization` | Optimize tool descriptions | False |
+
+> DSPy 3.2.0 removed GEPA's `enable_tool_optimization` (`ToolProposer`) — tool-description optimization is no longer supported.
 
 **Best for:** Complex agentic systems, when you have rich textual feedback.
 
@@ -343,6 +367,21 @@ from dspy.teleprompt import Ensemble
 ensembled = Ensemble(reduce_fn=dspy.majority).compile([prog1, prog2, prog3])
 ```
 
+### BetterTogether (DSPy 3.2.0 rewrite)
+
+Composes arbitrary prompt- and weight-level optimizers via a strategy string:
+
+```python
+optimizer = dspy.BetterTogether(
+    metric=metric,
+    p=dspy.GEPA(metric=feedback_metric, reflection_lm=dspy.LM("openai/gpt-4o"), auto="light"),
+    w=dspy.BootstrapFinetune(metric=metric),
+)
+compiled = optimizer.compile(program, trainset=trainset, strategy="p -> w -> p")
+```
+
+Defaults are `BootstrapFewShotWithRandomSearch` + `BootstrapFinetune` if `p`/`w` are omitted. Validation selection picks the best candidate across stages.
+
 ---
 
 ## Retrieval & RAG
@@ -355,6 +394,20 @@ import dspy
 colbert = dspy.ColBERTv2(url='http://20.102.90.50:2017/wiki17_abstracts')
 dspy.configure(lm=dspy.LM("openai/gpt-4o-mini"), rm=colbert)
 ```
+
+### Embeddings retrievers (DSPy 3.2.0)
+
+`dspy.EmbeddingsWithScores` (new) extends `Embeddings` to return similarity scores alongside passages:
+
+```python
+from dspy.retrievers import EmbeddingsWithScores
+
+retriever = EmbeddingsWithScores(corpus=corpus, embedder=embedder, k=5)
+result = retriever("What is the capital of France?")
+# result.passages, result.indices, result.scores
+```
+
+Use this when you want to filter low-confidence context before generation or when your downstream module needs the similarity distribution to calibrate answers.
 
 ### RAG Module Pattern
 
@@ -413,8 +466,11 @@ LLM-based semantic evaluation:
 from dspy.evaluate import SemanticF1
 
 semantic_metric = SemanticF1()
-score = semantic_metric(example, prediction)
+result = semantic_metric(example, prediction)
+score = result.score  # DSPy 3.2.0: returns dspy.Prediction, not a bare float
 ```
+
+> **DSPy 3.2.0 behavioral change:** `SemanticF1` and `CompleteAndGrounded` return `dspy.Prediction(score=...)` rather than `float`. `dspy.Evaluate` handles this transparently via `.score`; only direct callers must be updated.
 
 ### Custom Metrics
 
@@ -423,6 +479,39 @@ def my_metric(example, pred, trace=None):
     """Returns bool, int, or float."""
     return example.answer.lower() == pred.answer.lower()
 ```
+
+---
+
+## Errors & Caching (DSPy 3.2.0)
+
+### `dspy.ContextWindowExceededError`
+
+DSPy-owned exception raised by `BaseLM` subclasses when a prompt exceeds the LM's context window. Provider-agnostic replacement for string-matching on `litellm` errors:
+
+```python
+try:
+    pred = module(question=very_long_question)
+except dspy.ContextWindowExceededError:
+    with dspy.context(lm=dspy.LM("anthropic/claude-opus-4-7")):
+        pred = module(question=very_long_question)
+```
+
+### Safe disk-cache deserialization
+
+`dspy.configure_cache(..., restrict_pickle=True, safe_types=[...])` restricts which object types DSPy deserializes from the disk cache. Recommended for any deployment that reads a shared or untrusted cache directory:
+
+```python
+dspy.configure_cache(
+    enable_disk_cache=True,
+    disk_cache_dir="/var/cache/dspy",
+    restrict_pickle=True,
+    safe_types=[dspy.Prediction, dict, list, str, int, float, bool, type(None)],
+)
+```
+
+### Safe module state loading
+
+`BaseModule.load_state` filters unsafe LM-state keys (`api_base`, `base_url`, `model_list`) by default so that a saved module can't redirect a loader's LM calls to an attacker-controlled endpoint. Opt out with `allow_unsafe_lm_state=True` when loading trusted state.
 
 ---
 

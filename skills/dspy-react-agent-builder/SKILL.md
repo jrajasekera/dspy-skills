@@ -1,7 +1,7 @@
 ---
 name: dspy-react-agent-builder
 version: "1.0.0"
-dspy-compatibility: "3.1.2"
+dspy-compatibility: "3.2.0"
 description: This skill should be used when the user asks to "create a ReAct agent", "build an agent with tools", "implement tool-calling agent", "use dspy.ReAct", mentions "agent with tools", "reasoning and acting", "multi-step agent", "agent optimization with GEPA", or needs to build production agents that use tools to solve complex tasks.
 allowed-tools:
   - Read
@@ -182,7 +182,6 @@ optimizer = dspy.GEPA(
     metric=feedback_metric,
     reflection_lm=dspy.LM("openai/gpt-4o"),
     auto="medium",
-    enable_tool_optimization=True  # Also optimize tool docstrings
 )
 
 compiled = optimizer.compile(agent, trainset=trainset)
@@ -204,6 +203,11 @@ compiled.save("research_agent_optimized.json", save_program=False)
 - Agent may call tools unnecessarily or miss necessary calls
 - Requires GEPA optimization for production quality
 - Tool execution is sequential, not parallelized
+
+## Version Notes
+
+- DSPy 3.2.0 fixes a crash when a ReAct tool's parameter annotation isn't a concrete class (e.g. a generic alias or union). Non-class annotations no longer break the subclass guard in the adapter; this improves reliability for tools typed with `list[str] | None` and similar.
+- DSPy 3.2.0 removed GEPA's `enable_tool_optimization` kwarg; tool-description optimization via GEPA is no longer supported.
 
 ## Official Documentation
 
