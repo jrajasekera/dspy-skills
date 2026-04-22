@@ -13,7 +13,7 @@
       "name": "dspy-skills",
       "description": "Collection of skills for DSPy framework - program language models, optimize prompts, and build RAG pipelines systematically.",
       "source": "./",
-      "strict": false,
+      "strict": true,
       "skills": [
         "./skills/dspy-advanced-module-composition",
         "./skills/dspy-bootstrap-fewshot",
